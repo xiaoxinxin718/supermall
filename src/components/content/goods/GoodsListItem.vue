@@ -1,9 +1,9 @@
 <template>
-<div class="goods-item">
-  <img :src="goodsItem.show.img" alt="">
+<div class="goods-item" @click="itemClick">
+  <img v-lazy="showImage" alt="" @load="imageLoad" :key="showImage">
   <div class="goods-info">
     <p>{{goodsItem.title}}</p>
-    <span class="price">{{goodsItem.price}}</span>
+    <span class="price">￥{{goodsItem.price}}</span>
     <span class="collect">{{goodsItem.cfav}}</span>
   </div>
 </div>
@@ -19,6 +19,22 @@
           return{}
         }
       }
+    },
+    computed:{
+      showImage(){
+        // console.log(this.goodsItem.img);
+        return this.goodsItem.img || this.goodsItem.image || this.goodsItem.show.img
+      }
+    },
+    methods:{
+      imageLoad(){
+        this.$bus.$emit('itemImageLoad')
+      },
+      itemClick(){
+        this.$router.push({
+          path:'/detail/'+ this.goodsItem.iid
+        })
+      }
     }
   }
 </script>
@@ -27,7 +43,8 @@
   .goods-item {
     padding-bottom: 40px;
     position: relative;
-    width: 48%;
+    width: 45%;
+    margin-top: 5px;
   }
 
   .goods-item img {

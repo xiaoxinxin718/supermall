@@ -1,8 +1,7 @@
 <template>
   <div id="home">
-    <nav-bar class="hone-nav">
-      <div slot="center">购物街</div>
-    </nav-bar>
+    <nav-bar class="hone-nav"><div slot="center">购物街</div></nav-bar>
+    <tab-control ref="tabControl1" :titles="['流行','新款','精选']" @itemClick="tabClick" v-show="isFixed"/>
     <Scroll
       class="content"
       ref="scroll"
@@ -10,10 +9,10 @@
       @scroll="contentscroll"
       :pull-up-load="true"
       @pullingUp="loadMore">
-      <home-swiper :banners="banners"/>
+      <home-swiper :banners="banners"  @itemSwiperLoad="swiperLoad"/>
       <recommends-view :recommends="recommends"/>
       <feater-view/>
-      <tab-control class="tab-control" :titles="['流行','新款','精选']" @itemClick="tabClick"/>
+      <tab-control ref="tabControl2" :titles="['流行','新款','精选']" @itemClick="tabClick"/>
       <goods-list :goods="showGoodslist"/>
     </Scroll>
 <!--要想在组件上绑定事件 必须加上.native修饰符-->
@@ -33,6 +32,7 @@
   import BackTop from "components/content/backTop/BackTop";
 
   import {getHomeMultidata,getHomeGoods} from "network/home";
+  import {itemListenerMixin,backTopMixin} from 'common/mixin'
   export default {
     name: "",
     components:{
@@ -43,7 +43,6 @@
       TabControl,
       GoodsList,
       Scroll,
-      BackTop
     },
     data(){
       return{
@@ -55,7 +54,10 @@
           'sell':{page:0,list:[]}
         },
         showGoods: 'pop',
-        isShowBackTop : false
+        tabControlOffsetTop:0,
+        isFixed: false,
+        saveY : 0,
+        itemImgListener:null
       }
     },
     computed:{
@@ -72,9 +74,26 @@
       this.getHomeGoods('pop')
       this.getHomeGoods('new')
       this.getHomeGoods('sell')
+
+    },
+    mixins:[itemListenerMixin,backTopMixin],
+    //保留home离开后的位置,再次进入的时候直接回到上次home界面的位置
+    activated(){
+      this.$refs.scroll.scrollTo(0,this.saveY,0)
+      this.$refs.scroll.refresh()
+    },
+    deactivated(){
+      //1.保存Y值
+      this.saveY = this.$refs.scroll.getScrollY()
+      // console.log(this.saveY);
+
+      //2.取消全局监听事件
+      this.$bus.$off('itemImageLoad',this.itemImgListener)
+
     },
     methods:{
       //事件监听方法
+
       tabClick(index){
         switch (index) {
           case 0 :{
@@ -89,15 +108,23 @@
             this.showGoods = 'sell'
           }
         }
-      },
-      backClick(){
-        this.$refs.scroll.scrollTo(0,0)
+        this.$refs.tabControl1.controlIndex = index
+        this.$refs.tabControl2.controlIndex = index
       },
       contentscroll(position){
+        //1.判断BackTop是否显示
         this.isShowBackTop = -(position.y)>1000
+
+        //2.判断tabControl是否吸顶
+        this.isFixed = -(position.y) > this.tabControlOffsetTop
       },
       loadMore(){
         this.getHomeGoods(this.showGoods)
+      },
+      swiperLoad(){
+        //2.获取tabControl的offsetTop
+        //所有的组件都有一个属性$el:用于获取组件中的元素
+        this.tabControlOffsetTop=this.$refs.tabControl2.$el.offsetTop
       },
 
       //网络请求方法
@@ -151,4 +178,5 @@
     left: 0;
     right: 0;
   }
+
 </style>
